@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 
 namespace IdentityServer4.ResponseHandling
 {
@@ -36,16 +37,24 @@ namespace IdentityServer4.ResponseHandling
         protected readonly IProfileService Profile;
 
         /// <summary>
+        /// The clock
+        /// </summary>
+        protected readonly ISystemClock Clock;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizeInteractionResponseGenerator"/> class.
         /// </summary>
+        /// <param name="clock">The clock.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="consent">The consent.</param>
         /// <param name="profile">The profile.</param>
         public AuthorizeInteractionResponseGenerator(
+            ISystemClock clock,
             ILogger<AuthorizeInteractionResponseGenerator> logger,
             IConsentService consent, 
             IProfileService profile)
         {
+            Clock = clock;
             Logger = logger;
             Consent = consent;
             Profile = profile;
@@ -61,13 +70,25 @@ namespace IdentityServer4.ResponseHandling
         {
             Logger.LogTrace("ProcessInteractionAsync");
 
+            if (consent != null && consent.Granted == false && request.Subject.IsAuthenticated() == false)
+            {
+                // special case when anonymous user has issued a deny prior to authenticating
+                Logger.LogInformation("Error: User denied consent");
+                return new InteractionResponse
+                {
+                    Error = OidcConstants.AuthorizeErrors.AccessDenied
+                };
+            }
+
             var result = await ProcessLoginAsync(request);
             if (result.IsLogin || result.IsError)
             {
                 return result;
             }
 
-            return await ProcessConsentAsync(request, consent);
+            result = await ProcessConsentAsync(request, consent);
+
+            return result;
         }
 
         /// <summary>
@@ -153,7 +174,7 @@ namespace IdentityServer4.ResponseHandling
             if (request.MaxAge.HasValue)
             {
                 var authTime = request.Subject.GetAuthenticationTime();
-                if (IdentityServerDateTime.UtcNow > authTime.AddSeconds(request.MaxAge.Value))
+                if (Clock.UtcNow > authTime.AddSeconds(request.MaxAge.Value))
                 {
                     Logger.LogInformation("Showing login: Requested MaxAge exceeded.");
 
@@ -162,20 +183,21 @@ namespace IdentityServer4.ResponseHandling
             }
 
             // check local idp restrictions
-            if (currentIdp == IdentityServerConstants.LocalIdentityProvider && !request.Client.EnableLocalLogin)
+            if (currentIdp == IdentityServerConstants.LocalIdentityProvider)
             {
-                Logger.LogInformation("Showing login: User logged in locally, but client does not allow local logins");
-                return new InteractionResponse { IsLogin = true };
-            }
-
-            // check external idp restrictions
-            if (request.Client.IdentityProviderRestrictions != null && request.Client.IdentityProviderRestrictions.Any())
-            {
-                if (!request.Client.IdentityProviderRestrictions.Contains(currentIdp))
+                if (!request.Client.EnableLocalLogin)
                 {
-                    Logger.LogInformation("Showing login: User is logged in with idp: {idp}, but idp not in client restriction list.", currentIdp);
+                    Logger.LogInformation("Showing login: User logged in locally, but client does not allow local logins");
                     return new InteractionResponse { IsLogin = true };
                 }
+            }
+            // check external idp restrictions if user not using local idp
+            else if (request.Client.IdentityProviderRestrictions != null && 
+                request.Client.IdentityProviderRestrictions.Any() &&
+                !request.Client.IdentityProviderRestrictions.Contains(currentIdp))
+            {
+                Logger.LogInformation("Showing login: User is logged in with idp: {idp}, but idp not in client restriction list.", currentIdp);
+                return new InteractionResponse { IsLogin = true };
             }
 
             return new InteractionResponse();

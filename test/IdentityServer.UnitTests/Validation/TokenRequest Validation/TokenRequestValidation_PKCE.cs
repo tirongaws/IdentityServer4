@@ -13,15 +13,16 @@ using System.Collections.Specialized;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using System;
 
 namespace IdentityServer4.UnitTests.Validation.TokenRequest
 {
     public class TokenRequestValidation_PKCE
     {
-        const string Category = "TokenRequest Validation - PKCE";
+        private const string Category = "TokenRequest Validation - PKCE";
 
-        IClientStore _clients = Factory.CreateClientStore();
-        InputLengthRestrictions lengths = new InputLengthRestrictions();
+        private IClientStore _clients = Factory.CreateClientStore();
+        private InputLengthRestrictions lengths = new InputLengthRestrictions();
 
         [Theory]
         [InlineData("codeclient.pkce")]
@@ -35,6 +36,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -59,7 +61,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, verifier);
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeFalse();
         }
@@ -74,6 +76,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -98,7 +101,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, verifier);
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeFalse();
         }
@@ -117,6 +120,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -141,7 +145,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, verifier);
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeFalse();
         }
@@ -156,6 +160,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -176,7 +181,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.Code, handle);
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.TokenErrors.InvalidGrant);
@@ -193,6 +198,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -215,7 +221,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, "x".Repeat(lengths.CodeVerifierMinLength));
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.TokenErrors.InvalidGrant);
@@ -233,6 +239,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -257,7 +264,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, verifier + "invalid");
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.TokenErrors.InvalidGrant);
@@ -277,6 +284,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
 
             var code = new AuthorizationCode
             {
+                CreationTime = DateTime.UtcNow,
                 Subject = IdentityServerPrincipal.Create("123", "bob"),
                 ClientId = client.ClientId,
                 Lifetime = client.AuthorizationCodeLifetime,
@@ -301,7 +309,7 @@ namespace IdentityServer4.UnitTests.Validation.TokenRequest
             parameters.Add(OidcConstants.TokenRequest.CodeVerifier, verifier + "invalid");
             parameters.Add(OidcConstants.TokenRequest.RedirectUri, "https://server/cb");
 
-            var result = await validator.ValidateRequestAsync(parameters, client);
+            var result = await validator.ValidateRequestAsync(parameters, client.ToValidationResult());
 
             result.IsError.Should().BeTrue();
             result.Error.Should().Be(OidcConstants.TokenErrors.InvalidGrant);

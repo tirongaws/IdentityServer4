@@ -30,9 +30,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IIdentityServerBuilder AddSigningCredential(this IIdentityServerBuilder builder, SigningCredentials credential)
         {
-            // todo
+            // todo dom
             if (!(credential.Key is AsymmetricSecurityKey
-                || (credential.Key is JsonWebKey && ((JsonWebKey)credential.Key).HasPrivateKey)))
+                || credential.Key is JsonWebKey && ((JsonWebKey)credential.Key).HasPrivateKey))
             //&& !credential.Key.IsSupportedAlgorithm(SecurityAlgorithms.RsaSha256Signature))
             {
                 throw new InvalidOperationException("Signing key is not asymmetric");
@@ -115,7 +115,7 @@ namespace Microsoft.Extensions.DependencyInjection
             if (File.Exists(filename))
             {
                 var keyFile = File.ReadAllText(filename);
-                var tempKey = JsonConvert.DeserializeObject<TemporaryRsaKey>(keyFile, new JsonSerializerSettings() { ContractResolver = new RsaKeyContractResolver() });
+                var tempKey = JsonConvert.DeserializeObject<TemporaryRsaKey>(keyFile, new JsonSerializerSettings { ContractResolver = new RsaKeyContractResolver() });
 
                 return builder.AddSigningCredential(CreateRsaSecurityKey(tempKey.Parameters, tempKey.KeyId));
             }
@@ -138,7 +138,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 if (persistKey)
                 {
-                    File.WriteAllText(filename, JsonConvert.SerializeObject(tempKey, new JsonSerializerSettings() { ContractResolver = new RsaKeyContractResolver() }));
+                    File.WriteAllText(filename, JsonConvert.SerializeObject(tempKey, new JsonSerializerSettings { ContractResolver = new RsaKeyContractResolver() }));
                 }
                 
                 return builder.AddSigningCredential(key);
@@ -168,31 +168,23 @@ namespace Microsoft.Extensions.DependencyInjection
         public static RsaSecurityKey CreateRsaSecurityKey()
         {
             var rsa = RSA.Create();
+            RsaSecurityKey key;
 
-#if NET452
-            if (rsa.KeySize < 2048)
+            if (rsa is RSACryptoServiceProvider)
             {
                 rsa.Dispose();
-                rsa = new RSACryptoServiceProvider(2048);
-            }
-#endif
-            RsaSecurityKey key = null;
-#if NET452
-            if (rsa is RSACryptoServiceProvider) 
-            {
-                var parameters = rsa.ExportParameters(includePrivateParameters: true);
+                var cng = new RSACng(2048);
+
+                var parameters = cng.ExportParameters(includePrivateParameters: true);
                 key = new RsaSecurityKey(parameters);
-                        
-                rsa.Dispose();
-            }   
-#endif
-            if (key == null)
+            }
+            else
             {
+                rsa.KeySize = 2048;
                 key = new RsaSecurityKey(rsa);
             }
 
             key.KeyId = CryptoRandom.CreateUniqueId(16);
-
             return key;
         }
 

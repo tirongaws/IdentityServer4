@@ -58,7 +58,7 @@ namespace IdentityServer4.Test
 
             context.LogIssuedClaims(Logger);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -70,9 +70,9 @@ namespace IdentityServer4.Test
         public virtual Task IsActiveAsync(IsActiveContext context)
         {
             var user = Users.FindBySubjectId(context.Subject.GetSubjectId());
-            context.IsActive = user != null;
+            context.IsActive = user?.IsActive == true;
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
     }
 }

@@ -1,33 +1,39 @@
-﻿using System;
+﻿// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using IdentityModel;
-using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 
 namespace IdentityServer4.Infrastructure
 {
     internal class BackChannelLogoutClient
     {
-        const int LogoutTokenLifetime = 5 * 60;
+        private const int LogoutTokenLifetime = 5 * 60;
 
         //private readonly IHttpContextAccessor _httpContext;
+        private readonly ISystemClock _clock;
         private readonly IdentityServerTools _tools;
-        private readonly HttpClient _backChannelClient;
+        private readonly BackChannelHttpClient _backChannelClient;
         private readonly ILogger<BackChannelLogoutClient> _logger;
 
         public BackChannelLogoutClient(
             //IHttpContextAccessor httpContext,
+            ISystemClock clock,
             IdentityServerTools tools,
-            HttpClient backChannelClient,
+            BackChannelHttpClient backChannelClient,
             ILogger<BackChannelLogoutClient> logger)
         {
             //_httpContext = httpContext;
+            _clock = clock;
             _tools = tools;
             _backChannelClient = backChannelClient;
             _logger = logger;
@@ -40,7 +46,7 @@ namespace IdentityServer4.Infrastructure
             return Task.WhenAll(tasks);
         }
 
-        async Task SendLogoutAsync(BackChannelLogoutModel client)
+        private async Task SendLogoutAsync(BackChannelLogoutModel client)
         {
             var token = await CreateLogoutTokenAsync(client);
 
@@ -62,17 +68,17 @@ namespace IdentityServer4.Infrastructure
             }
         }
 
-        async Task<string> CreateLogoutTokenAsync(BackChannelLogoutModel client)
+        private async Task<string> CreateLogoutTokenAsync(BackChannelLogoutModel client)
         {
             var json = "{\"" + OidcConstants.Events.BackChannelLogout + "\":{} }";
-            var claims = new List<Claim>()
+            var claims = new List<Claim>
             {
                 //new Claim(JwtClaimTypes.Issuer, _httpContext.HttpContext.GetIdentityServerIssuerUri()),
                 new Claim(JwtClaimTypes.Subject, client.SubjectId),
                 new Claim(JwtClaimTypes.Audience, client.ClientId),
-                new Claim(JwtClaimTypes.IssuedAt, IdentityServerDateTime.UtcNow.ToEpochTime().ToString(), ClaimValueTypes.Integer),
+                new Claim(JwtClaimTypes.IssuedAt, _clock.UtcNow.UtcDateTime.ToEpochTime().ToString(), ClaimValueTypes.Integer),
                 new Claim(JwtClaimTypes.JwtId, CryptoRandom.CreateUniqueId(16)),
-                new Claim(JwtClaimTypes.Events, json, IdentityServerConstants.ClaimValueTypes.Json),
+                new Claim(JwtClaimTypes.Events, json, IdentityServerConstants.ClaimValueTypes.Json)
             };
 
             if (client.SessionIdRequired)

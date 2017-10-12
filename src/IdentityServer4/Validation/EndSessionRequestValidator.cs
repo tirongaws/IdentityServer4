@@ -64,7 +64,7 @@ namespace IdentityServer4.Validation
 
             var validatedRequest = new ValidatedEndSessionRequest
             {
-                Raw = parameters,
+                Raw = parameters
             };
 
             var idTokenHint = parameters.Get(OidcConstants.EndSessionRequest.IdTokenHint);
@@ -89,7 +89,7 @@ namespace IdentityServer4.Validation
                     }
 
                     validatedRequest.Subject = subject;
-                    validatedRequest.SessionId = await _userSession.GetCurrentSessionIdAsync();
+                    validatedRequest.SessionId = await _userSession.GetSessionIdAsync();
                     validatedRequest.ClientIds = await _userSession.GetClientListAsync();
                 }
 
@@ -121,7 +121,7 @@ namespace IdentityServer4.Validation
             {
                 // no id_token to authenticate the client, but we do have a user and a user session
                 validatedRequest.Subject = subject;
-                validatedRequest.SessionId = await _userSession.GetCurrentSessionIdAsync();
+                validatedRequest.SessionId = await _userSession.GetSessionIdAsync();
                 validatedRequest.ClientIds = await _userSession.GetClientListAsync();
             }
 

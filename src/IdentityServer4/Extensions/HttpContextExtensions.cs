@@ -7,11 +7,11 @@ using IdentityServer4.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using System.Linq;
+using Microsoft.AspNetCore.Authentication;
 
 #pragma warning disable 1591
 
@@ -19,6 +19,13 @@ namespace IdentityServer4.Extensions
 {
     public static class HttpContextExtensions
     {
+        public static async Task<bool> GetSchemeSupportsSignOutAsync(this HttpContext context, string scheme)
+        {
+            var provider = context.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
+            var handler = await provider.GetHandlerAsync(context, scheme);
+            return (handler != null && handler is IAuthenticationSignOutHandler);
+        }
+
         public static void SetIdentityServerOrigin(this HttpContext context, string value)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
@@ -36,6 +43,17 @@ namespace IdentityServer4.Extensions
         public static string GetIdentityServerOrigin(this HttpContext context)
         {
             return context.Items[Constants.EnvironmentKeys.IdentityServerOrigin] as string;
+        }
+
+        internal static void SetSignOutCalled(this HttpContext context)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+            context.Items[Constants.EnvironmentKeys.SignOutCalled] = "true";
+        }
+
+        internal static bool GetSignOutCalled(this HttpContext context)
+        {
+            return context.Items.ContainsKey(Constants.EnvironmentKeys.SignOutCalled);
         }
 
         /// <summary>
@@ -100,22 +118,10 @@ namespace IdentityServer4.Extensions
             return uri;
         }
 
-        /// <summary>
-        /// Gets the identity server user asynchronous.
-        /// </summary>
-        /// <param name="context">The context.</param>
-        /// <returns></returns>
-        public static async Task<ClaimsPrincipal> GetIdentityServerUserAsync(this HttpContext context)
-        {
-            var userSession = context.RequestServices.GetRequiredService<IUserSession>();
-            var user = await userSession.GetIdentityServerUserAsync();
-            return user;
-        }
-
         internal static async Task<string> GetIdentityServerSignoutFrameCallbackUrlAsync(this HttpContext context, LogoutMessage logoutMessage = null)
         {
             var userSession = context.RequestServices.GetRequiredService<IUserSession>();
-            var user = await userSession.GetIdentityServerUserAsync();
+            var user = await userSession.GetUserAsync();
             var currentSubId = user?.GetSubjectId();
 
             EndSession endSessionMsg = null;
@@ -148,7 +154,7 @@ namespace IdentityServer4.Extensions
                     endSessionMsg = new EndSession
                     {
                         SubjectId = currentSubId,
-                        SessionId = await userSession.GetCurrentSessionIdAsync(),
+                        SessionId = await userSession.GetSessionIdAsync(),
                         ClientIds = clientIds
                     };
                 }
@@ -156,7 +162,8 @@ namespace IdentityServer4.Extensions
 
             if (endSessionMsg != null)
             {
-                var msg = new Message<EndSession>(endSessionMsg);
+                var clock = context.RequestServices.GetRequiredService<ISystemClock>();
+                var msg = new Message<EndSession>(endSessionMsg, clock.UtcNow.UtcDateTime);
 
                 var endSessionMessageStore = context.RequestServices.GetRequiredService<IMessageStore<EndSession>>();
                 var id = await endSessionMessageStore.WriteAsync(msg);

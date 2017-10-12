@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using IdentityServer4.Configuration;
 using IdentityServer4.Extensions;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
@@ -12,12 +11,13 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using System.Linq;
+using Microsoft.AspNetCore.Authentication;
 
 namespace IdentityServer4.Services
 {
-    class DefaultIdentityServerInteractionService : IIdentityServerInteractionService
+    internal class DefaultIdentityServerInteractionService : IIdentityServerInteractionService
     {
-        private readonly IdentityServerOptions _options;
+        private readonly ISystemClock _clock;
         private readonly IHttpContextAccessor _context;
         private readonly IMessageStore<LogoutMessage> _logoutMessageStore;
         private readonly IMessageStore<ErrorMessage> _errorMessageStore;
@@ -28,7 +28,7 @@ namespace IdentityServer4.Services
         private readonly ReturnUrlParser _returnUrlParser;
 
         public DefaultIdentityServerInteractionService(
-            IdentityServerOptions options,
+            ISystemClock clock,
             IHttpContextAccessor context,
             IMessageStore<LogoutMessage> logoutMessageStore,
             IMessageStore<ErrorMessage> errorMessageStore,
@@ -38,7 +38,7 @@ namespace IdentityServer4.Services
             ReturnUrlParser returnUrlParser,
             ILogger<DefaultIdentityServerInteractionService> logger)
         {
-            _options = options;
+            _clock = clock;
             _context = context;
             _logoutMessageStore = logoutMessageStore;
             _errorMessageStore = errorMessageStore;
@@ -74,19 +74,19 @@ namespace IdentityServer4.Services
 
         public async Task<string> CreateLogoutContextAsync()
         {
-            var user = await _userSession.GetIdentityServerUserAsync();
+            var user = await _userSession.GetUserAsync();
             if (user != null)
             {
                 var clientIds = await _userSession.GetClientListAsync();
                 if (clientIds.Any())
                 {
-                    var sid = await _userSession.GetCurrentSessionIdAsync();
+                    var sid = await _userSession.GetSessionIdAsync();
                     var msg = new Message<LogoutMessage>(new LogoutMessage
                     {
                         SubjectId = user?.GetSubjectId(),
                         SessionId = sid,
                         ClientIds = clientIds
-                    });
+                    }, _clock.UtcNow.UtcDateTime);
                     var id = await _logoutMessageStore.WriteAsync(msg);
                     return id;
                 }
@@ -121,14 +121,17 @@ namespace IdentityServer4.Services
         {
             if (subject == null)
             {
-                var user = await _userSession.GetIdentityServerUserAsync();
+                var user = await _userSession.GetUserAsync();
                 subject = user?.GetSubjectId();
             }
 
-            if (subject == null) throw new ArgumentNullException(nameof(subject), "User is not currently authenticated, and no subject id passed");
+            if (subject == null && consent.Granted)
+            {
+                throw new ArgumentNullException(nameof(subject), "User is not currently authenticated, and no subject id passed");
+            }
 
             var consentRequest = new ConsentRequest(request, subject);
-            await _consentMessageStore.WriteAsync(consentRequest.Id, new Message<ConsentResponse>(consent));
+            await _consentMessageStore.WriteAsync(consentRequest.Id, new Message<ConsentResponse>(consent, _clock.UtcNow.UtcDateTime));
         }
 
         public bool IsValidReturnUrl(string returnUrl)
@@ -149,7 +152,7 @@ namespace IdentityServer4.Services
 
         public async Task<IEnumerable<Consent>> GetAllUserConsentsAsync()
         {
-            var user = await _userSession.GetIdentityServerUserAsync();
+            var user = await _userSession.GetUserAsync();
             if (user != null)
             {
                 var subject = user.GetSubjectId();
@@ -161,7 +164,7 @@ namespace IdentityServer4.Services
 
         public async Task RevokeUserConsentAsync(string clientId)
         {
-            var user = await _userSession.GetIdentityServerUserAsync();
+            var user = await _userSession.GetUserAsync();
             if (user != null)
             {
                 var subject = user.GetSubjectId();
@@ -171,7 +174,7 @@ namespace IdentityServer4.Services
 
         public async Task RevokeTokensForCurrentSessionAsync()
         {
-            var user = await _userSession.GetIdentityServerUserAsync();
+            var user = await _userSession.GetUserAsync();
             if (user != null)
             {
                 var subject = user.GetSubjectId();

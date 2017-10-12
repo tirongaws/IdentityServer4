@@ -5,9 +5,9 @@
 using IdentityServer4.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using System;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 
 namespace IdentityServer4.UnitTests.Common
 {
@@ -15,29 +15,43 @@ namespace IdentityServer4.UnitTests.Common
     {
         public List<string> Clients = new List<string>();
 
-        public ClaimsPrincipal User { get; set; }
-        public string SessionId { get; set; }
-
         public bool EnsureSessionIdCookieWasCalled { get; set; }
         public bool RemoveSessionIdCookieWasCalled { get; set; }
         public bool CreateSessionIdWasCalled { get; set; }
 
-        public Task AddClientIdAsync(string clientId)
-        {
-            Clients.Add(clientId);
-            return Task.FromResult(0);
-        }
+        public ClaimsPrincipal User { get; set; }
+        public string SessionId { get; set; }
+        public AuthenticationProperties Properties { get; set; }
 
-        public void CreateSessionId(SignInContext context)
+
+        public Task CreateSessionIdAsync(ClaimsPrincipal principal, AuthenticationProperties properties)
         {
             CreateSessionIdWasCalled = true;
+            User = principal;
             SessionId = Guid.NewGuid().ToString();
+            return Task.CompletedTask;
+        }
+
+        public Task<ClaimsPrincipal> GetUserAsync()
+        {
+            return Task.FromResult(User);
+        }
+
+        Task<string> IUserSession.GetSessionIdAsync()
+        {
+            return Task.FromResult(SessionId);
         }
 
         public Task EnsureSessionIdCookieAsync()
         {
             EnsureSessionIdCookieWasCalled = true;
-            return Task.FromResult(0);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveSessionIdCookieAsync()
+        {
+            RemoveSessionIdCookieWasCalled = true;
+            return Task.CompletedTask;
         }
 
         public Task<IEnumerable<string>> GetClientListAsync()
@@ -45,19 +59,10 @@ namespace IdentityServer4.UnitTests.Common
             return Task.FromResult<IEnumerable<string>>(Clients);
         }
 
-        public Task<string> GetCurrentSessionIdAsync()
+        public Task AddClientIdAsync(string clientId)
         {
-            return Task.FromResult(SessionId);
-        }
-
-        public Task<ClaimsPrincipal> GetIdentityServerUserAsync()
-        {
-            return Task.FromResult(User);
-        }
-
-        public void RemoveSessionIdCookie()
-        {
-            RemoveSessionIdCookieWasCalled = true;
+            Clients.Add(clientId);
+            return Task.CompletedTask;
         }
     }
 }

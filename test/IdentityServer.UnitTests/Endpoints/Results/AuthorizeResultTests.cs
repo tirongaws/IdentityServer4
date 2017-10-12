@@ -17,19 +17,20 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using IdentityServer.UnitTests.Common;
 
 namespace IdentityServer4.UnitTests.Endpoints.Results
 {
     public class AuthorizeResultTests
     {
-        AuthorizeResult _subject;
+        private AuthorizeResult _subject;
 
-        AuthorizeResponse _response = new AuthorizeResponse();
-        IdentityServerOptions _options = new IdentityServerOptions();
-        MockUserSession _mockUserSession = new MockUserSession();
-        MockMessageStore<Models.ErrorMessage> _mockErrorMessageStore = new MockMessageStore<Models.ErrorMessage>();
+        private AuthorizeResponse _response = new AuthorizeResponse();
+        private IdentityServerOptions _options = new IdentityServerOptions();
+        private MockUserSession _mockUserSession = new MockUserSession();
+        private MockMessageStore<Models.ErrorMessage> _mockErrorMessageStore = new MockMessageStore<Models.ErrorMessage>();
 
-        DefaultHttpContext _context = new DefaultHttpContext();
+        private DefaultHttpContext _context = new DefaultHttpContext();
 
         public AuthorizeResultTests()
         {
@@ -40,7 +41,7 @@ namespace IdentityServer4.UnitTests.Endpoints.Results
             _options.UserInteraction.ErrorUrl = "~/error";
             _options.UserInteraction.ErrorIdParameter = "errorId";
 
-            _subject = new AuthorizeResult(_response, _options, _mockUserSession, _mockErrorMessageStore);
+            _subject = new AuthorizeResult(_response, _options, _mockUserSession, _mockErrorMessageStore, new StubClock());
         }
 
         [Fact]

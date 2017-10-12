@@ -19,14 +19,14 @@ namespace IdentityServer4.UnitTests.Stores.Default
 {
     public class DefaultPersistedGrantStoreTests
     {
-        InMemoryPersistedGrantStore _store = new InMemoryPersistedGrantStore();
-        IAuthorizationCodeStore _codes;
-        IRefreshTokenStore _refreshTokens;
-        IReferenceTokenStore _referenceTokens;
-        IUserConsentStore _userConsent;
-        StubHandleGenerationService _stubHandleGenerationService = new StubHandleGenerationService();
+        private InMemoryPersistedGrantStore _store = new InMemoryPersistedGrantStore();
+        private IAuthorizationCodeStore _codes;
+        private IRefreshTokenStore _refreshTokens;
+        private IReferenceTokenStore _referenceTokens;
+        private IUserConsentStore _userConsent;
+        private StubHandleGenerationService _stubHandleGenerationService = new StubHandleGenerationService();
 
-        ClaimsPrincipal _user = IdentityServerPrincipal.Create("123", "bob");
+        private ClaimsPrincipal _user = IdentityServerPrincipal.Create("123", "bob");
 
         public DefaultPersistedGrantStoreTests()
         {
@@ -280,6 +280,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
         {
             var consent1 = new Consent()
             {
+                CreationTime = DateTime.UtcNow,
                 ClientId = "client",
                 SubjectId = "123",
                 Scopes = new string[] { "foo", "bar" }
@@ -298,6 +299,7 @@ namespace IdentityServer4.UnitTests.Stores.Default
         {
             var consent1 = new Consent()
             {
+                CreationTime = DateTime.UtcNow,
                 ClientId = "client",
                 SubjectId = "123",
                 Scopes = new string[] { "foo", "bar" }

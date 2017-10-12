@@ -11,28 +11,29 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using IdentityServer.UnitTests.Common;
 
 namespace IdentityServer4.UnitTests.Services.Default
 {
     public class DefaultIdentityServerInteractionServiceTests
     {
-        DefaultIdentityServerInteractionService _subject;
+        private DefaultIdentityServerInteractionService _subject;
 
-        IdentityServerOptions _options = new IdentityServerOptions();
-        MockHttpContextAccessor _mockMockHttpContextAccessor;
-        MockMessageStore<EndSession> _mockEndSessionStore = new MockMessageStore<EndSession>();
-        MockMessageStore<LogoutMessage> _mockLogoutMessageStore = new MockMessageStore<LogoutMessage>();
-        MockMessageStore<Models.ErrorMessage> _mockErrorMessageStore = new MockMessageStore<Models.ErrorMessage>();
-        MockConsentMessageStore _mockConsentStore = new MockConsentMessageStore();
-        MockPersistedGrantService _mockPersistedGrantService = new MockPersistedGrantService();
-        MockUserSession _mockUserSession = new MockUserSession();
-        MockReturnUrlParser _mockReturnUrlParser = new MockReturnUrlParser();
+        private IdentityServerOptions _options = new IdentityServerOptions();
+        private MockHttpContextAccessor _mockMockHttpContextAccessor;
+        private MockMessageStore<EndSession> _mockEndSessionStore = new MockMessageStore<EndSession>();
+        private MockMessageStore<LogoutMessage> _mockLogoutMessageStore = new MockMessageStore<LogoutMessage>();
+        private MockMessageStore<ErrorMessage> _mockErrorMessageStore = new MockMessageStore<ErrorMessage>();
+        private MockConsentMessageStore _mockConsentStore = new MockConsentMessageStore();
+        private MockPersistedGrantService _mockPersistedGrantService = new MockPersistedGrantService();
+        private MockUserSession _mockUserSession = new MockUserSession();
+        private MockReturnUrlParser _mockReturnUrlParser = new MockReturnUrlParser();
 
         public DefaultIdentityServerInteractionServiceTests()
         {
             _mockMockHttpContextAccessor = new MockHttpContextAccessor(_options, _mockUserSession, _mockEndSessionStore);
 
-            _subject = new DefaultIdentityServerInteractionService(_options, 
+            _subject = new DefaultIdentityServerInteractionService(new StubClock(), 
                 _mockMockHttpContextAccessor,
                 _mockLogoutMessageStore,
                 _mockErrorMessageStore,
@@ -102,19 +103,27 @@ namespace IdentityServer4.UnitTests.Services.Default
         }
 
         [Fact]
-        public void GrantConsentAsync_should_throw_if_no_subject()
+        public void GrantConsentAsync_should_throw_if_granted_and_no_subject()
         {
-            Func<Task> act = () => _subject.GrantConsentAsync(new AuthorizationRequest(), new ConsentResponse(), null);
+            Func<Task> act = () => _subject.GrantConsentAsync(
+                new AuthorizationRequest(), 
+                new ConsentResponse() { ScopesConsented = new[] { "openid" } }, 
+                null);
 
             act.ShouldThrow<ArgumentNullException>()
                 .And.Message.Should().Contain("subject");
         }
 
         [Fact]
+        public async Task GrantConsentAsync_should_allow_deny_for_anonymous_users()
+        {
+            await _subject.GrantConsentAsync(new AuthorizationRequest(), ConsentResponse.Denied, null);
+        }
+
+        [Fact]
         public async Task GrantConsentAsync_should_use_current_subject_and_create_message()
         {
             _mockUserSession.User = IdentityServerPrincipal.Create("bob", "bob");
-            //_mockMockHttpContextAccessor.HttpContext.SetUser(user);
 
             var req = new AuthorizationRequest() { ClientId = "client" };
             await _subject.GrantConsentAsync(req, new ConsentResponse(), null);

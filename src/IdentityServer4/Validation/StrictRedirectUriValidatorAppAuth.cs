@@ -39,7 +39,8 @@ namespace IdentityServer4.Validation
             var isAllowed = await base.IsRedirectUriValidAsync(requestedUri, client);
             if (isAllowed) return isAllowed;
 
-            if (client.RedirectUris.Contains("http://127.0.0.1")) return IsLoopback(requestedUri);
+            // since this is appauth specific, we can require pkce
+            if (client.RequirePkce && client.RedirectUris.Contains("http://127.0.0.1")) return IsLoopback(requestedUri);
 
             return false;
         }
@@ -57,7 +58,8 @@ namespace IdentityServer4.Validation
             var isAllowed = await base.IsPostLogoutRedirectUriValidAsync(requestedUri, client);
             if (isAllowed) return isAllowed;
 
-            if (client.RedirectUris.Contains("http://127.0.0.1")) return IsLoopback(requestedUri);
+            // since this is appauth specific, we can require pkce
+            if (client.RequirePkce && client.RedirectUris.Contains("http://127.0.0.1")) return IsLoopback(requestedUri);
 
             return false;
         }
@@ -82,7 +84,7 @@ namespace IdentityServer4.Validation
                 return false;
             }
 
-            if (int.TryParse(parts[2], out int port))
+            if (int.TryParse(parts[2], out var port))
             {
                 if (port >= 0 && port <= 65536) return true;
             }

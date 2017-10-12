@@ -3,7 +3,6 @@
 
 
 using IdentityModel;
-using IdentityServer4.Hosting;
 using IdentityServer4.Models;
 using System;
 using System.Collections.Generic;
@@ -194,11 +193,22 @@ namespace IdentityServer4
             }
         }
 
+        public static class EndpointNames
+        {
+            public const string Authorize = "Authorize";
+            public const string Token = "Token";
+            public const string Discovery = "Discovery";
+            public const string Introspection = "Introspection";
+            public const string Revocation = "Revocation";
+            public const string EndSession = "Endsession";
+            public const string CheckSession = "Checksession";
+            public const string UserInfo = "Userinfo";
+        }
+
         public static class ProtocolRoutePaths
         {
             public const string Authorize              = "connect/authorize";
-            public const string AuthorizeAfterConsent  = Authorize + "/consent";
-            public const string AuthorizeAfterLogin    = Authorize + "/login";
+            public const string AuthorizeCallback      = Authorize + "/callback";
             public const string DiscoveryConfiguration = ".well-known/openid-configuration";
             public const string DiscoveryWebKeys       = DiscoveryConfiguration + "/jwks";
             public const string Token                  = "connect/token";
@@ -219,22 +229,11 @@ namespace IdentityServer4
             };
         }
 
-        public static readonly Dictionary<string, EndpointName> EndpointPathToNameMap = new Dictionary<string, EndpointName>
-        {
-            { ProtocolRoutePaths.Authorize, EndpointName.Authorize },
-            { ProtocolRoutePaths.CheckSession, EndpointName.CheckSession},
-            { ProtocolRoutePaths.DiscoveryConfiguration, EndpointName.Discovery},
-            { ProtocolRoutePaths.EndSession, EndpointName.EndSession },
-            { ProtocolRoutePaths.Introspection, EndpointName.Introspection },
-            { ProtocolRoutePaths.Revocation, EndpointName.Revocation },
-            { ProtocolRoutePaths.Token, EndpointName.Token },
-            { ProtocolRoutePaths.UserInfo, EndpointName.UserInfo }
-        };
-
         public static class EnvironmentKeys
         {
             public const string IdentityServerBasePath = "idsvr:IdentityServerBasePath";
-            public const string IdentityServerOrigin   = "idsvr:IdentityServerOrigin";
+            public const string IdentityServerOrigin = "idsvr:IdentityServerOrigin";
+            public const string SignOutCalled = "idsvr:IdentityServerSignOutCalled";
         }
 
         public static class TokenTypeHints

@@ -9,28 +9,28 @@ namespace IdentityServer4.Stores
 {
     internal class ConsentMessageStore : IConsentMessageStore
     {
-        protected readonly MessageCookie<ConsentResponse> _cookie;
+        protected readonly MessageCookie<ConsentResponse> Cookie;
 
         public ConsentMessageStore(MessageCookie<ConsentResponse> cookie)
         {
-            _cookie = cookie;
+            Cookie = cookie;
         }
 
         public virtual Task DeleteAsync(string id)
         {
-            _cookie.Clear(id);
-            return Task.FromResult(0);
+            Cookie.Clear(id);
+            return Task.CompletedTask;
         }
 
         public virtual Task<Message<ConsentResponse>> ReadAsync(string id)
         {
-            return Task.FromResult(_cookie.Read(id));
+            return Task.FromResult(Cookie.Read(id));
         }
 
         public virtual Task WriteAsync(string id, Message<ConsentResponse> message)
         {
-            _cookie.Write(id, message);
-            return Task.FromResult(0);
+            Cookie.Write(id, message);
+            return Task.CompletedTask;
         }
     }
 }

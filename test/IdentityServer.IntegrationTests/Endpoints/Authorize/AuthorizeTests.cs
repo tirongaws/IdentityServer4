@@ -18,11 +18,11 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
 {
     public class AuthorizeTests
     {
-        const string Category = "Authorize endpoint";
+        private const string Category = "Authorize endpoint";
 
-        MockIdSvrUiPipeline _mockPipeline = new MockIdSvrUiPipeline();
+        private IdentityServerPipeline _mockPipeline = new IdentityServerPipeline();
 
-        Client _client1;
+        private Client _client1;
 
         public AuthorizeTests()
         {
@@ -53,6 +53,7 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
                     AllowedScopes = new List<string> { "openid", "profile", "api1", "api2" },
                     RedirectUris = new List<string> { "https://client3/callback" },
                     AllowAccessTokensViaBrowser = true,
+                    EnableLocalLogin = false,
                     IdentityProviderRestrictions = new List<string> { "google" }
                 }
             });
@@ -99,7 +100,7 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task get_request_should_not_return_404()
         {
-            var response = await _mockPipeline.BrowserClient.GetAsync(MockIdSvrUiPipeline.AuthorizeEndpoint);
+            var response = await _mockPipeline.BrowserClient.GetAsync(IdentityServerPipeline.AuthorizeEndpoint);
 
             response.StatusCode.Should().NotBe(HttpStatusCode.NotFound);
         }
@@ -108,7 +109,7 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task post_request_without_form_should_return_415()
         {
-            var response = await _mockPipeline.BrowserClient.PostAsync(MockIdSvrUiPipeline.AuthorizeEndpoint, new StringContent("foo"));
+            var response = await _mockPipeline.BrowserClient.PostAsync(IdentityServerPipeline.AuthorizeEndpoint, new StringContent("foo"));
 
             response.StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
         }
@@ -117,7 +118,7 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task post_request_should_return_200()
         {
-            var response = await _mockPipeline.BrowserClient.PostAsync(MockIdSvrUiPipeline.AuthorizeEndpoint,
+            var response = await _mockPipeline.BrowserClient.PostAsync(IdentityServerPipeline.AuthorizeEndpoint,
                 new FormUrlEncodedContent(
                     new Dictionary<string, string>{ }));
 
@@ -128,7 +129,7 @@ namespace IdentityServer4.IntegrationTests.Endpoints.Authorize
         [Trait("Category", Category)]
         public async Task get_request_should_not_return_500()
         {
-            var response = await _mockPipeline.BrowserClient.GetAsync(MockIdSvrUiPipeline.AuthorizeEndpoint);
+            var response = await _mockPipeline.BrowserClient.GetAsync(IdentityServerPipeline.AuthorizeEndpoint);
 
             ((int)response.StatusCode).Should().BeLessThan(500);
         }

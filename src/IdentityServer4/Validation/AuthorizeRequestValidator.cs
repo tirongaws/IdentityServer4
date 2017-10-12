@@ -101,7 +101,7 @@ namespace IdentityServer4.Validation
             if (customResult.IsError)
             {
                 LogError("Error in custom validation: " + customResult.Error, request);
-                return Invalid(request, customResult.Error);
+                return Invalid(request, customResult.Error, customResult.ErrorDescription);
             }
 
             _logger.LogTrace("Authorize request protocol validation successful");
@@ -529,7 +529,7 @@ namespace IdentityServer4.Validation
             var maxAge = request.Raw.Get(OidcConstants.AuthorizeRequest.MaxAge);
             if (maxAge.IsPresent())
             {
-                if (int.TryParse(maxAge, out int seconds))
+                if (int.TryParse(maxAge, out var seconds))
                 {
                     if (seconds >= 0)
                     {
@@ -601,7 +601,7 @@ namespace IdentityServer4.Validation
             if (_options.Endpoints.EnableCheckSessionEndpoint && 
                 request.Subject.IsAuthenticated())
             {
-                var sessionId = await _userSession.GetCurrentSessionIdAsync();
+                var sessionId = await _userSession.GetSessionIdAsync();
                 if (sessionId.IsPresent())
                 {
                     request.SessionId = sessionId;

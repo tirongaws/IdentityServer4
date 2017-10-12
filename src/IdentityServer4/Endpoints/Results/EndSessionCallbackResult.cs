@@ -12,11 +12,10 @@ using System.Net;
 using System;
 using IdentityServer4.Extensions;
 using IdentityServer4.Configuration;
-using IdentityServer4.Infrastructure;
 
 namespace IdentityServer4.Endpoints.Results
 {
-    class EndSessionCallbackResult : IEndpointResult
+    internal class EndSessionCallbackResult : IEndpointResult
     {
         private readonly EndSessionCallbackValidationResult _result;
 
@@ -27,21 +26,17 @@ namespace IdentityServer4.Endpoints.Results
 
         internal EndSessionCallbackResult(
             EndSessionCallbackValidationResult result,
-            IdentityServerOptions options,
-            BackChannelLogoutClient backChannelClient)
+            IdentityServerOptions options)
             : this(result)
         {
             _options = options;
-            _backChannelClient = backChannelClient;
         }
 
         private IdentityServerOptions _options;
-        private BackChannelLogoutClient _backChannelClient;
 
-        void Init(HttpContext context)
+        private void Init(HttpContext context)
         {
             _options = _options ?? context.RequestServices.GetRequiredService<IdentityServerOptions>();
-            _backChannelClient = _backChannelClient ?? context.RequestServices.GetRequiredService<BackChannelLogoutClient>();
         }
 
         public async Task ExecuteAsync(HttpContext context)
@@ -55,16 +50,10 @@ namespace IdentityServer4.Endpoints.Results
             else
             {
                 context.Response.SetNoCache();
-                AddXfoHeaders(context);
                 AddCspHeaders(context);
 
                 var html = GetHtml();
                 await context.Response.WriteHtmlAsync(html);
-                await context.Response.Body.FlushAsync();
-
-                // todo: discuss if we should do this before rendering/flushing
-                // or even from a forked task
-                await _backChannelClient.SendLogoutsAsync(_result.BackChannelLogouts);
             }
         }
 
@@ -92,23 +81,7 @@ namespace IdentityServer4.Endpoints.Results
             }
         }
 
-        private void AddXfoHeaders(HttpContext context)
-        {
-            if (!context.Response.Headers.ContainsKey("X-Frame-Options"))
-            {
-                var logoutPageUrl = _options.UserInteraction.LogoutUrl;
-                if (logoutPageUrl.IsLocalUrl())
-                {
-                    context.Response.Headers.Add("X-Frame-Options", "SAMEORIGIN");
-                }
-                else
-                {
-                    context.Response.Headers.Add("X-Frame-Options", $"ALLOW-FROM {logoutPageUrl.GetOrigin()}");
-                }
-            }
-        }
-
-        string GetHtml()
+        private string GetHtml()
         {
             string framesHtml = null;
 
